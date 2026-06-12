@@ -4,198 +4,279 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="羽球記分">
 <title>羽球記分板</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: -apple-system, 'Helvetica Neue', sans-serif; -webkit-tap-highlight-color: transparent; background: #111; }
 
-  :root {
-    --bg: #f7f7f5;
-    --surface: #ffffff;
-    --border: rgba(0,0,0,0.1);
-    --border-md: rgba(0,0,0,0.18);
-    --text: #1a1a1a;
-    --text-2: #666;
-    --text-3: #999;
-    --green: #1D9E75;
-    --green-bg: #E1F5EE;
-    --green-text: #0F6E56;
-    --red-bg: #FAECE7;
-    --red-text: #993C1D;
-    --red-border: #D85A30;
-    --radius: 16px;
-    --radius-sm: 10px;
+  .court {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #141414;
-      --surface: #1f1f1f;
-      --border: rgba(255,255,255,0.1);
-      --border-md: rgba(255,255,255,0.2);
-      --text: #f0f0f0;
-      --text-2: #aaa;
-      --text-3: #666;
-      --green-bg: #0a2e21;
-      --green-text: #4ecba0;
-      --red-bg: #2e1208;
-      --red-text: #f0997b;
-    }
+  .half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.12s;
+  }
+  .half:active { filter: brightness(1.15); }
+  .half.flash { filter: brightness(1.3); }
+
+  .half.red { background: #C0392B; }
+  .half.blue { background: #1A5C9E; }
+  .half.serving::after {
+    content: '●';
+    position: absolute;
+    top: 16px;
+    font-size: 14px;
+    opacity: 0.9;
+    color: rgba(255,255,255,0.8);
+  }
+  .half.red.serving::after { right: 20px; }
+  .half.blue.serving::after { right: 20px; }
+
+  .player-label {
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
   }
 
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Helvetica Neue', sans-serif; -webkit-tap-highlight-color: transparent; }
+  .score {
+    font-size: clamp(120px, 30vw, 200px);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
 
-  body { display: flex; flex-direction: column; min-height: 100vh; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  .serve-dot {
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    margin-top: 10px;
+    height: 20px;
+  }
 
-  .app { display: flex; flex-direction: column; flex: 1; max-width: 520px; margin: 0 auto; width: 100%; padding: 1rem 1rem 1.5rem; gap: 12px; }
-
-  /* Header */
-  .header { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
-  .header-title { font-size: 14px; font-weight: 500; color: var(--text-2); }
-  .set-display { font-size: 13px; color: var(--text-3); }
-
-  /* Set dots */
+  /* Middle bar */
+  .midbar {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 44px;
+    background: #111;
+    pointer-events: none;
+  }
+  .set-info {
+    font-size: 13px;
+    color: rgba(255,255,255,0.55);
+    pointer-events: none;
+  }
   .set-dots { display: flex; gap: 5px; align-items: center; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
-  .dot.a { background: var(--green); }
-  .dot.b { background: var(--red-border); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+  .dot.r { background: #e74c3c; }
+  .dot.b { background: #3b9ae1; }
 
-  /* Court */
-  .court { display: grid; grid-template-columns: 1fr 36px 1fr; gap: 8px; align-items: center; }
+  /* Mic button */
+  .mic-area {
+    position: absolute;
+    bottom: env(safe-area-inset-bottom, 0);
+    left: 0; right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 24px;
+    pointer-events: none;
+  }
+  .mic-btn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    pointer-events: all;
+    transition: transform 0.1s;
+    -webkit-appearance: none;
+  }
+  .mic-btn:active { transform: scale(0.9); }
+  .mic-btn.on { background: rgba(255,255,255,0.2); border-color: #fff; animation: pulse 1.2s infinite; }
+  .mic-btn.err { border-color: #ff6b6b; }
+  @keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.08);} }
 
-  .pcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 0.5rem 1rem; text-align: center; transition: border-color 0.2s, background 0.2s; }
-  .pcard.serving { border: 2px solid var(--green); }
-  .pcard.flash { background: var(--green-bg); }
+  .mic-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 6px;
+    text-align: center;
+    pointer-events: none;
+    min-height: 16px;
+  }
+  .mic-label.on { color: rgba(255,255,255,0.9); }
 
-  .pname { font-size: 14px; color: var(--text-2); margin-bottom: 4px; letter-spacing: 0.02em; }
-  .pscore { font-size: 88px; font-weight: 600; color: var(--text); line-height: 1; cursor: pointer; user-select: none; font-variant-numeric: tabular-nums; }
-  .pscore:active { opacity: 0.5; }
+  /* Toast */
+  .toast {
+    position: absolute;
+    top: calc(50% + 30px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.75);
+    border-radius: 24px;
+    padding: 8px 16px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; pointer-events: all; }
+  .toast-msg { font-size: 13px; color: #fff; }
+  .undo-pill {
+    font-size: 12px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    color: #fff;
+    cursor: pointer;
+    pointer-events: all;
+  }
 
-  .serve-wrap { height: 22px; margin-top: 8px; display: flex; justify-content: center; }
-  .serve-badge { font-size: 11px; background: var(--green-bg); color: var(--green-text); padding: 3px 10px; border-radius: 20px; display: inline-block; }
-
-  .vs-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .vs { font-size: 13px; color: var(--text-3); font-weight: 500; }
-
-  /* Last action toast */
-  .toast { min-height: 32px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .toast-msg { font-size: 13px; color: var(--text-2); }
-  .undo-pill { font-size: 12px; background: var(--surface); border: 1px solid var(--border-md); border-radius: 20px; padding: 4px 12px; cursor: pointer; color: var(--text-2); white-space: nowrap; }
-  .undo-pill:active { opacity: 0.6; }
-
-  /* Mic section */
-  .mic-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-
-  .mic-btn { width: 80px; height: 80px; border-radius: 50%; border: 1.5px solid var(--border-md); background: var(--bg); cursor: pointer; font-size: 32px; color: var(--text); display: flex; align-items: center; justify-content: center; transition: transform 0.1s; -webkit-appearance: none; }
-  .mic-btn:active { transform: scale(0.93); }
-  .mic-btn.on { background: var(--green-bg); border-color: var(--green); animation: pulse 1.2s infinite; }
-  .mic-btn.err { background: var(--red-bg); border-color: var(--red-border); }
-
-  @keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.07);} }
-
-  .mic-label { font-size: 13px; color: var(--text-2); text-align: center; min-height: 18px; }
-  .mic-label.on { color: var(--green-text); font-weight: 500; }
-  .mic-label.err { color: var(--red-text); }
-
-  .heard { font-size: 12px; color: var(--text-3); font-style: italic; min-height: 16px; text-align: center; }
-
-  .cmds { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
-  .cmd { font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 9px; color: var(--text-3); }
-
-  /* Actions */
-  .actions { display: flex; gap: 8px; justify-content: center; }
-  .abtn { font-size: 13px; padding: 8px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-md); background: var(--surface); color: var(--text-2); cursor: pointer; display: flex; align-items: center; gap: 6px; }
-  .abtn:active { opacity: 0.6; }
+  /* Heard text */
+  .heard {
+    position: absolute;
+    top: calc(50% - 60px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    font-style: italic;
+    pointer-events: none;
+    white-space: nowrap;
+  }
 
   /* Winner overlay */
-  .winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .winner-box { background: var(--surface); border-radius: var(--radius); padding: 2rem 2.5rem; text-align: center; }
-  .winner-icon { font-size: 48px; margin-bottom: 8px; }
-  .winner-title { font-size: 26px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-  .winner-sub { font-size: 15px; color: var(--text-2); margin-bottom: 1.5rem; }
-  .winner-btn { background: var(--green-bg); color: var(--green-text); border: none; border-radius: var(--radius-sm); padding: 12px 32px; font-size: 15px; cursor: pointer; font-weight: 500; }
+  .winner-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 99;
+  }
+  .winner-box {
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 2.5rem 3rem;
+    text-align: center;
+    color: #fff;
+  }
+  .winner-title { font-size: 32px; font-weight: 700; margin-bottom: 6px; }
+  .winner-sub { font-size: 16px; color: rgba(255,255,255,0.6); margin-bottom: 1.5rem; }
+  .winner-btn {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-size: 15px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
-<div class="app">
 
-  <div class="header">
-    <div>
-      <div class="header-title">第 <span id="set-num">1</span> 局 &nbsp;·&nbsp; 最佳 3 局 2 勝</div>
-    </div>
-    <div class="set-dots" id="dots"></div>
+<div class="court" id="court">
+  <div class="half red serving" id="half-r" onclick="addPoint(0)">
+    <div class="player-label">紅</div>
+    <div class="score" id="sr">0</div>
+    <div class="serve-dot" id="sdr">發球</div>
   </div>
-
-  <div class="court">
-    <div class="pcard serving" id="ca">
-      <div class="pname">球員 A</div>
-      <div class="pscore" id="sa">0</div>
-      <div class="serve-wrap"><span class="serve-badge" id="sva">發球中</span></div>
-    </div>
-    <div class="vs-col">
-      <span class="vs">VS</span>
-    </div>
-    <div class="pcard" id="cb">
-      <div class="pname">球員 B</div>
-      <div class="pscore" id="sb">0</div>
-      <div class="serve-wrap"><span class="serve-badge" id="svb" style="visibility:hidden">發球中</span></div>
-    </div>
+  <div class="half blue" id="half-b" onclick="addPoint(1)">
+    <div class="player-label">藍</div>
+    <div class="score" id="sb">0</div>
+    <div class="serve-dot" id="sdb"></div>
   </div>
+</div>
 
-  <div class="toast" id="toast"></div>
+<div class="midbar">
+  <div class="set-info">第 <span id="set-num">1</span> 局</div>
+  <div class="set-dots" id="dots"></div>
+  <div class="set-info" id="set-score">0 : 0</div>
+</div>
 
-  <div class="mic-section">
-    <button class="mic-btn" id="mic-btn">
-      <i class="ti ti-microphone"></i>
-    </button>
-    <div class="mic-label" id="mic-label">按麥克風開始持續監聽</div>
-    <div class="heard" id="heard"></div>
-    <div class="cmds">
-      <span class="cmd">「A 得分」</span>
-      <span class="cmd">「B 得分」</span>
-      <span class="cmd">「A 失分」</span>
-      <span class="cmd">「重發」</span>
-      <span class="cmd">「取消」</span>
-    </div>
-  </div>
+<div class="heard" id="heard"></div>
 
-  <div class="actions">
-    <button class="abtn" id="undo-btn"><i class="ti ti-arrow-back-up"></i> 上一步</button>
-    <button class="abtn" id="reset-btn"><i class="ti ti-refresh"></i> 重設</button>
-  </div>
+<div class="toast" id="toast">
+  <span class="toast-msg" id="toast-msg"></span>
+  <button class="undo-pill" onclick="undo()">↩ 取消</button>
+</div>
 
+<div class="mic-area">
+  <button class="mic-btn" id="mic-btn" aria-label="語音記分">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="17" x2="12" y2="21"/>
+      <line x1="8" y1="21" x2="16" y2="21"/>
+    </svg>
+  </button>
+  <div class="mic-label" id="mic-label">語音記分</div>
 </div>
 
 <script>
 const st = { scores:[0,0], sets:[0,0], serving:0, history:[], listening:false, rec:null, restartTimer:null, toastTimer:null };
 
 function render() {
-  document.getElementById('sa').textContent = st.scores[0];
+  document.getElementById('sr').textContent = st.scores[0];
   document.getElementById('sb').textContent = st.scores[1];
-  document.getElementById('ca').className = 'pcard' + (st.serving===0?' serving':'');
-  document.getElementById('cb').className = 'pcard' + (st.serving===1?' serving':'');
-  document.getElementById('sva').style.visibility = st.serving===0?'visible':'hidden';
-  document.getElementById('svb').style.visibility = st.serving===1?'visible':'hidden';
+  document.getElementById('half-r').className = 'half red' + (st.serving===0?' serving':'');
+  document.getElementById('half-b').className = 'half blue' + (st.serving===1?' serving':'');
+  document.getElementById('sdr').textContent = st.serving===0?'發球':'';
+  document.getElementById('sdb').textContent = st.serving===1?'發球':'';
   document.getElementById('set-num').textContent = st.sets[0]+st.sets[1]+1;
+  document.getElementById('set-score').textContent = st.sets[0]+' : '+st.sets[1];
   const d = document.getElementById('dots');
   d.innerHTML='';
-  for(let i=0;i<st.sets[0];i++){const x=document.createElement('div');x.className='dot a';d.appendChild(x);}
+  for(let i=0;i<st.sets[0];i++){const x=document.createElement('div');x.className='dot r';d.appendChild(x);}
   for(let i=0;i<st.sets[1];i++){const x=document.createElement('div');x.className='dot b';d.appendChild(x);}
 }
 
 function flash(p) {
-  const el = p===0?document.getElementById('ca'):document.getElementById('cb');
+  const el = p===0?document.getElementById('half-r'):document.getElementById('half-b');
   el.classList.add('flash');
-  setTimeout(()=>el.classList.remove('flash'), 500);
+  setTimeout(()=>el.classList.remove('flash'), 400);
 }
 
-function setToast(msg) {
+function showToast(msg, withUndo=true) {
   clearTimeout(st.toastTimer);
-  const el = document.getElementById('toast');
-  el.innerHTML = `<span class="toast-msg">${msg}</span><button class="undo-pill" onclick="undo()">↩ 取消</button>`;
-  st.toastTimer = setTimeout(()=>{ el.innerHTML=''; }, 5000);
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.querySelector('.undo-pill').style.display = withUndo?'':'none';
+  t.classList.add('show');
+  st.toastTimer = setTimeout(()=>t.classList.remove('show'), 5000);
 }
 
 function save() {
@@ -211,60 +292,60 @@ function addPoint(p) {
   if((maxS>=21&&lead>=2)||maxS>=30) {
     st.sets[p]++;
     if(st.sets[p]>=2){ render(); showWinner(p); return; }
-    setToast(`球員${p===0?'A':'B'} 贏得第${st.sets[0]+st.sets[1]}局`);
+    showToast((p===0?'🔴 紅':'🔵 藍')+'贏得本局！');
     st.scores=[0,0]; st.serving=p;
   } else {
     st.serving=p;
-    setToast(`球員${p===0?'A':'B'} 得分 → ${st.scores[0]}:${st.scores[1]}`);
+    showToast((p===0?'🔴 紅':'🔵 藍')+' 得分 '+st.scores[0]+':'+st.scores[1]);
   }
   render();
 }
 
 function undo() {
-  if(!st.history.length){ document.getElementById('toast').innerHTML='<span class="toast-msg" style="color:var(--text-3)">沒有可撤銷的操作</span>'; return; }
+  if(!st.history.length){ showToast('沒有可撤銷的操作', false); return; }
   const prev=st.history.pop();
   st.scores=prev.scores; st.sets=prev.sets; st.serving=prev.serving;
-  document.getElementById('toast').innerHTML='<span class="toast-msg">已撤銷</span>';
+  document.getElementById('toast').classList.remove('show');
   render();
 }
 
 function showWinner(p) {
-  const name=p===0?'A':'B';
+  const name=p===0?'🔴 紅隊':'🔵 藍隊';
   const div=document.createElement('div');
   div.className='winner-overlay';
-  div.innerHTML=`<div class="winner-box"><div class="winner-icon">🏆</div><div class="winner-title">球員 ${name} 獲勝！</div><div class="winner-sub">${st.sets[0]} : ${st.sets[1]}</div><button class="winner-btn" onclick="fullReset()">新局開始</button></div>`;
+  div.innerHTML=`<div class="winner-box"><div class="winner-title">${name} 獲勝！</div><div class="winner-sub">${st.sets[0]} : ${st.sets[1]}</div><button class="winner-btn" onclick="fullReset()">新局開始</button></div>`;
   document.body.appendChild(div);
 }
 
 function fullReset() {
   document.querySelectorAll('.winner-overlay').forEach(e=>e.remove());
   st.scores=[0,0]; st.sets=[0,0]; st.serving=0; st.history=[];
-  document.getElementById('toast').innerHTML='';
+  document.getElementById('toast').classList.remove('show');
   document.getElementById('heard').textContent='';
   render();
 }
 
 function processCmd(text) {
   document.getElementById('heard').textContent = '「'+text+'」';
+  setTimeout(()=>document.getElementById('heard').textContent='', 3000);
   const t=text.toLowerCase();
   if(t.includes('取消')||t.includes('上一步')){undo();return;}
-  if(t.includes('重發')){document.getElementById('toast').innerHTML='<span class="toast-msg">重發球</span>';return;}
-  const aWin = t.includes('a得分')||t.includes('a 得分')||t.includes('甲得分')||t.includes('a加分');
-  const bLose = t.includes('b失分')||t.includes('b 失分');
-  const bWin = t.includes('b得分')||t.includes('b 得分')||t.includes('乙得分')||t.includes('b加分');
-  const aLose = t.includes('a失分')||t.includes('a 失分');
-  if(aWin||bLose) addPoint(0);
-  else if(bWin||aLose) addPoint(1);
+  if(t.includes('重發')){showToast('重發球', false);return;}
+  const redWin  = t.includes('紅得分')||t.includes('紅色得分')||t.includes('紅加分')||t.includes('紅分')||t.includes('藍失分')||t.includes('藍色失分');
+  const blueWin = t.includes('藍得分')||t.includes('藍色得分')||t.includes('藍加分')||t.includes('藍分')||t.includes('紅失分')||t.includes('紅色失分');
+  if(redWin) addPoint(0);
+  else if(blueWin) addPoint(1);
 }
 
-function setLabel(msg, cls='') {
+function setLabel(msg, on=false) {
   const el=document.getElementById('mic-label');
-  el.textContent=msg; el.className='mic-label'+(cls?' '+cls:'');
+  el.textContent=msg;
+  el.className='mic-label'+(on?' on':'');
 }
 
 function startListening() {
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){ setLabel('此瀏覽器不支援語音，請用 Safari','err'); return; }
+  if(!SR){ setLabel('請用 Safari 開啟'); document.getElementById('mic-btn').classList.add('err'); return; }
   if(!st.rec) {
     const r=new SR();
     r.lang='zh-TW'; r.continuous=true; r.interimResults=true;
@@ -277,19 +358,19 @@ function startListening() {
       if(int) document.getElementById('heard').textContent='「'+int+'…」';
       if(fin) processCmd(fin);
     };
-    r.onstart=()=>{ setLabel('監聽中 — 說指令即可記分','on'); document.getElementById('mic-btn').classList.add('on'); };
+    r.onstart=()=>{ setLabel('監聽中', true); document.getElementById('mic-btn').classList.add('on'); };
     r.onend=()=>{
       if(st.listening){
         clearTimeout(st.restartTimer);
         st.restartTimer=setTimeout(()=>{ try{r.start();}catch(e){} },400);
       } else {
         document.getElementById('mic-btn').classList.remove('on');
-        setLabel('按麥克風開始持續監聽');
+        setLabel('語音記分');
       }
     };
     r.onerror=(e)=>{
       if(e.error==='no-speech') return;
-      if(e.error==='not-allowed'){ setLabel('請允許麥克風權限','err'); st.listening=false; document.getElementById('mic-btn').classList.remove('on'); }
+      if(e.error==='not-allowed'){ setLabel('請允許麥克風'); st.listening=false; document.getElementById('mic-btn').classList.remove('on'); }
     };
     st.rec=r;
   }
@@ -302,16 +383,12 @@ function stopListening() {
   clearTimeout(st.restartTimer);
   try{st.rec.stop();}catch(e){}
   document.getElementById('mic-btn').classList.remove('on');
-  setLabel('按麥克風開始持續監聽');
+  setLabel('語音記分');
 }
 
 document.getElementById('mic-btn').addEventListener('click',()=>{
   if(st.listening) stopListening(); else startListening();
 });
-document.getElementById('sa').addEventListener('click',()=>addPoint(0));
-document.getElementById('sb').addEventListener('click',()=>addPoint(1));
-document.getElementById('undo-btn').addEventListener('click',undo);
-document.getElementById('reset-btn').addEventListener('click',()=>{ if(confirm('確定重設？')) fullReset(); });
 
 render();
 </script>
